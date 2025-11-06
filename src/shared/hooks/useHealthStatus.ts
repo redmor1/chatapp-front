@@ -6,7 +6,7 @@ export function useHealthStatus() {
     services: [
       { name: "users", isHealthy: true, timestamp: new Date() },
       { name: "messages", isHealthy: true, timestamp: new Date() },
-      { name: "groups", isHealthy: true, timestamp: new Date() },
+      { name: "conversations", isHealthy: true, timestamp: new Date() },
     ],
     timestamp: new Date(),
   });

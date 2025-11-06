@@ -26,7 +26,11 @@ class HealthService {
     }
 
     const services: ServiceHealth[] = [];
-    const serviceNames: MicroserviceName[] = ["users", "messages", "groups"];
+    const serviceNames: MicroserviceName[] = [
+      "users",
+      "messages",
+      "conversations",
+    ];
 
     // Verificar los 3 microservicios en paralelo
     await Promise.all(

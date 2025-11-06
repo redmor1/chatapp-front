@@ -15,6 +15,17 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@layer base {
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:not([disabled]),
+  [role="button"]:not([disabled]) {
+    cursor: pointer;
+  }
+}
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
