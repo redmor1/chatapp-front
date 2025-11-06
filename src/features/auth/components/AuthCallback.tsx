@@ -1,17 +1,4 @@
-import { useEffect } from "react";
-import { useNavigate } from "react-router";
-import { useAuth } from "../hooks/useAuth";
-
 export const AuthCallback = () => {
-  const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      navigate("/chat", { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="text-center">

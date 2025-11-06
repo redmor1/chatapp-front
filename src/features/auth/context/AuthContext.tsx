@@ -20,7 +20,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuth0();
 
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Mapear usuario de Auth0 a nuestro tipo
   useEffect(() => {
@@ -31,22 +30,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: auth0User.name || "",
         avatarUrl: auth0User.picture,
       });
-      setIsAuthenticated(true);
     } else {
       setUser(null);
-      setIsAuthenticated(false);
     }
   }, [auth0IsAuthenticated, auth0User]);
 
   // Login
-  const login = useCallback(async () => {
-    try {
-      await loginWithRedirect();
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
-  }, [loginWithRedirect]);
+  const login = useCallback(
+    async (returnTo?: string) => {
+      try {
+        await loginWithRedirect({
+          appState: {
+            returnTo: returnTo || window.location.pathname,
+          },
+        });
+      } catch (error) {
+        console.error("Login error:", error);
+        throw error;
+      }
+    },
+    [loginWithRedirect]
+  );
 
   // Logout
   const logout = useCallback(() => {
@@ -72,14 +76,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Auto-obtener token cuando el usuario está autenticado
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
+    if (auth0IsAuthenticated && !isLoading) {
       getAccessToken();
     }
-  }, [isAuthenticated, isLoading, getAccessToken]);
+  }, [auth0IsAuthenticated, isLoading, getAccessToken]);
 
   const value: AuthContextType = {
     user,
-    isAuthenticated,
+    isAuthenticated: auth0IsAuthenticated,
     isLoading,
     error: auth0Error?.message || null,
     login,

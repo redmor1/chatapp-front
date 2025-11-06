@@ -10,7 +10,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: () => Promise<void>;
+  login: (returnTo?: string) => Promise<void>;
   logout: () => void;
   getAccessToken: () => Promise<string | undefined>;
 }
