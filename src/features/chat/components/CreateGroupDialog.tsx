@@ -19,9 +19,16 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    const initialMembersString =
+      (formData.get("initialMembers") as string) || "";
+    const initialMembers = initialMembersString
+      .split(",")
+      .map((member) => member.trim())
+      .filter((member) => member.length > 0);
+
     const groupData: CreateGroupData = {
       groupName: formData.get("groupName") as string,
-      initialMembers: [], // TODO: por ahora, tengo que hacer logica de agregar miembros
+      initialMembers,
     };
 
     try {

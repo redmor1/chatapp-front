@@ -89,6 +89,11 @@ function ChatPage() {
           chatId={selectedChat?.id}
           chatType={selectedChat?.type}
           chatName={selectedChat?.name}
+          onGroupDeleted={() => {
+            // Recargar conversaciones, limpiar selección, etc.
+            refreshConversations();
+            setSelectedChat(null);
+          }}
         />
       </div>
     </div>
