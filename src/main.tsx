@@ -7,6 +7,7 @@ import { AuthProvider } from "./features/auth/context/AuthContext.tsx";
 import { Auth0ProviderWithNavigate } from "./features/auth/components/Auth0ProviderWithNavigate.tsx";
 import { AuthCallback } from "./features/auth/components/AuthCallback.tsx";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute.tsx";
+import { UserProvider } from "./features/user/context/UserContext.tsx";
 import ChatPage from "./pages/ChatPage.tsx";
 
 createRoot(document.getElementById("root")!).render(
@@ -20,8 +21,22 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/login" element={<App />} />
 
             <Route element={<ProtectedRoute />}>
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/profile" element={<div>Profile Page</div>} />
+              <Route
+                path="/chat"
+                element={
+                  <UserProvider>
+                    <ChatPage />
+                  </UserProvider>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <UserProvider>
+                    <div>Profile Page</div>
+                  </UserProvider>
+                }
+              />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

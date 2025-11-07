@@ -3,6 +3,8 @@ import { useChatData } from "../features/chat/hooks/useChatData";
 import { ChatSidebar } from "../features/chat/components/ChatSidebar";
 import { ChatWindow } from "../features/chat/components/ChatWindow";
 import { CreateGroupDialog } from "../features/chat/components/CreateGroupDialog";
+import { UserProfileDialog } from "../features/user/components/UserProfileDialog";
+import { UserProfileButton } from "../features/user/components/UserProfileButton";
 import { BackendStatus } from "../shared/components/BackendStatus";
 import { LogoutButton } from "../features/auth/components/LogoutButton";
 
@@ -19,6 +21,7 @@ function ChatPage() {
     type: "group" | "direct";
     name: string;
   } | null>(null);
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
 
   const handleSelectChat = (chatId: string, type: "group" | "direct") => {
     let chatName = "";
@@ -71,10 +74,17 @@ function ChatPage() {
               Mensaje Directo
             </button>
             <CreateGroupDialog onGroupCreated={refreshConversations} />
+            <UserProfileButton onClick={() => setShowProfileDialog(true)} />
             <LogoutButton />
           </div>
         </div>
       </div>
+
+      {/* User Profile Dialog */}
+      <UserProfileDialog
+        open={showProfileDialog}
+        onOpenChange={setShowProfileDialog}
+      />
 
       {/* Main Chat Area */}
       <div className="flex-1 flex overflow-hidden">

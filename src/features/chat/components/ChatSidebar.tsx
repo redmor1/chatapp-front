@@ -1,5 +1,6 @@
 import * as Tabs from "@radix-ui/react-tabs";
 import type { Conversation } from "../types/chatTypes";
+import { Avatar } from "../../../shared/components/Avatar";
 
 interface ChatSidebarProps {
   groups: Conversation[];
@@ -70,9 +71,11 @@ export function ChatSidebar({
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {group.nombre?.charAt(0).toUpperCase() || "G"}
-                      </div>
+                      <Avatar
+                        src={group.avatarUrl || undefined}
+                        alt={group.nombre || "Grupo"}
+                        size="md"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">
                           {group.nombre || "Grupo sin nombre"}
@@ -106,11 +109,11 @@ export function ChatSidebar({
                     }`}
                   >
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-linear-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {conversation.miembros[0]?.nombre
-                          .charAt(0)
-                          .toUpperCase() || "U"}
-                      </div>
+                      <Avatar
+                        src={conversation.miembros[0]?.avatarUrl || undefined}
+                        alt={conversation.miembros[0]?.nombre || "Usuario"}
+                        size="md"
+                      />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-semibold text-gray-900 truncate">
                           {conversation.miembros[0]?.nombre || "Usuario"}

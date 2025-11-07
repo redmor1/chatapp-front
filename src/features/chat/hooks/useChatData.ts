@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { getConversationsFromAuthenticatedUser } from "../api/conversationApi";
 import type { Conversation } from "../types/chatTypes";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 export function useChatData() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated } = useAuth();
 
   // Filtrar conversaciones por tipo
   const groups = conversations.filter((conv) => conv.tipo === "grupo");
@@ -15,11 +17,14 @@ export function useChatData() {
 
   useEffect(() => {
     async function fetchChatData() {
+      if (!isAuthenticated) {
+        return;
+      }
+
       try {
         setIsLoading(true);
         setError(null);
 
-        // Obtener todas las conversaciones (grupos y directos)
         const conversationsData = await getConversationsFromAuthenticatedUser();
         setConversations(conversationsData || []);
       } catch (err) {
@@ -31,7 +36,7 @@ export function useChatData() {
     }
 
     fetchChatData();
-  }, []);
+  }, [isAuthenticated]);
 
   const refreshConversations = async () => {
     try {
