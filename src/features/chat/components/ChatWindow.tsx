@@ -23,7 +23,10 @@ export function ChatWindow({
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   
-  const { messages, isLoading, sendMessage, messagesEndRef } = useChatMessages(chatId);
+  const { messages, isLoading, sendMessage, messagesEndRef } = useChatMessages(
+    chatId,
+    chatType === "group" ? "grupo" : "directo"
+  );
   const { user } = useAuth();
 
   useEffect(() => {

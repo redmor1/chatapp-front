@@ -8,7 +8,10 @@ import type { Message } from "../types/chatTypes";
 import { useSignalR } from "./useSignalR";
 import { useAuth } from "../../auth/hooks/useAuth";
 
-export function useChatMessages(conversationId?: string) {
+export function useChatMessages(
+  conversationId?: string,
+  chatType?: "grupo" | "directo"
+) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +21,7 @@ export function useChatMessages(conversationId?: string) {
 
   // Cargar historial inicial
   useEffect(() => {
-    if (!conversationId) {
+    if (!conversationId || !chatType) {
       setMessages([]);
       return;
     }
@@ -27,7 +30,10 @@ export function useChatMessages(conversationId?: string) {
       setIsLoading(true);
       setError(null);
       try {
-        const history = await getMessagesFromConversation(conversationId);
+        const history = await getMessagesFromConversation(
+          conversationId,
+          chatType
+        );
         // Ordenar por fecha ascendente (el backend suele devolver descendente para paginación)
         setMessages(
           history.sort(
@@ -45,7 +51,7 @@ export function useChatMessages(conversationId?: string) {
     };
 
     fetchMessages();
-  }, [conversationId]);
+  }, [conversationId, chatType]);
 
   // Suscripción a SignalR
   useEffect(() => {
@@ -91,9 +97,9 @@ export function useChatMessages(conversationId?: string) {
   }, [conversationId, signalR, user?.id]);
 
   const sendMessage = async (content: string) => {
-    if (!conversationId) return;
+    if (!conversationId || !chatType) return;
     try {
-      await sendMessageApi(conversationId, content);
+      await sendMessageApi(conversationId, content, chatType);
       // No agregamos el mensaje manualmente aquí porque esperamos el evento de SignalR
       // para confirmar que se guardó y mantener consistencia.
       // Opcionalmente podríamos agregarlo con estado "enviando".

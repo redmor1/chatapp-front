@@ -16,11 +16,12 @@ export async function getDirectConversationsFromAuthenticatedUser() {
 
 export async function getMessagesFromConversation(
   conversationId: string,
+  type: "grupo" | "directo",
   limit: number = 50,
   before?: string
 ): Promise<Message[]> {
   try {
-    const params: any = { limit };
+    const params: any = { limit, tipo: type };
     if (before) {
       params.before = before;
     }
@@ -29,7 +30,9 @@ export async function getMessagesFromConversation(
       `/api/v1/conversaciones/${conversationId}/mensajes`,
       { params }
     );
-    return response.data;
+    // El backend devuelve { mensajes: [], nextCursor: ... }
+    // Ajustamos para devolver solo el array de mensajes por ahora
+    return response.data.mensajes || [];
   } catch (e) {
     console.error(e);
     throw Error("Error fetching messages from conversation");
@@ -38,12 +41,14 @@ export async function getMessagesFromConversation(
 
 export async function sendMessage(
   conversationId: string,
-  content: string
+  content: string,
+  type: "grupo" | "directo"
 ): Promise<void> {
   try {
     await getMicroserviceClient("messages").post(
       `/api/v1/conversaciones/${conversationId}/mensajes`,
-      { contenido: content }
+      { contenido: content },
+      { params: { tipo: type } }
     );
   } catch (e) {
     console.error(e);
