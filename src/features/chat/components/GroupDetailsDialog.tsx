@@ -16,6 +16,8 @@ interface GroupDetailsDialogProps {
   chatName?: string;
 }
 
+import { useSignalR } from "../hooks/useSignalR";
+
 export function GroupDetailsDialog({
   open,
   onOpenChange,
@@ -26,6 +28,8 @@ export function GroupDetailsDialog({
   const [newMemberId, setNewMemberId] = useState("");
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [addMemberError, setAddMemberError] = useState<string | null>(null);
+  
+  const signalR = useSignalR();
 
   const loadMembers = useCallback(async () => {
     if (!chatId) return;
@@ -47,6 +51,25 @@ export function GroupDetailsDialog({
       loadMembers();
     }
   }, [open, loadMembers]);
+
+  // Escuchar cambios en la membresía vía SignalR
+  useEffect(() => {
+    if (!open || !chatId) return;
+
+    const handleMemberChange = (data: { conversacionId: string }) => {
+      if (data.conversacionId === chatId) {
+        loadMembers();
+      }
+    };
+
+    signalR.onUserAdded(handleMemberChange);
+    signalR.onUserRemoved(handleMemberChange);
+
+    return () => {
+      signalR.offUserAdded(handleMemberChange);
+      signalR.offUserRemoved(handleMemberChange);
+    };
+  }, [open, chatId, signalR, loadMembers]);
 
   async function handleAddMember(e: React.FormEvent) {
     e.preventDefault();

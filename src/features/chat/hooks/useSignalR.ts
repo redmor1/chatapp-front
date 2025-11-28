@@ -1,20 +1,29 @@
-import { useEffect, useState } from "react";
-import { HubConnection } from "@microsoft/signalr";
+import { useEffect } from "react";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { signalRService } from "../services/signalRService";
 
+const HUB_URL = import.meta.env.PROD
+  ? "https://chatapp-mensajes.onrender.com/hubs/mensajes"
+  : "/hubs/mensajes";
+
 export function useSignalR() {
-  const [connection, setConnection] = useState<HubConnection | null>(null);
+  const { isAuthenticated, getAccessToken } = useAuth();
 
   useEffect(() => {
-    // Initialize connection
-    const conn = signalRService.getConnection();
-    if (conn) {
-      setConnection(conn);
+    if (isAuthenticated) {
+      signalRService.setTokenFactory(async () => {
+        const token = await getAccessToken();
+        return token;
+      });
+
+      signalRService.startConnection(HUB_URL);
     }
 
-    // Subscribe to connection changes if needed, 
-    // but for now we just return the singleton connection
-  }, []);
+    return () => {
+      // Optional: Stop connection on unmount or logout
+      // signalRService.stopConnection();
+    };
+  }, [isAuthenticated, getAccessToken]);
 
-  return { connection };
+  return signalRService;
 }

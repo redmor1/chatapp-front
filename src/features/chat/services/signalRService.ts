@@ -1,32 +1,31 @@
 import * as signalR from "@microsoft/signalr";
 
-// Helper to get token from storage since we can't use hook here
-const getStoredToken = () => localStorage.getItem("access_token");
+type MessageHandler = (message: any) => void;
+type ReadHandler = (info: any) => void;
+type TypingHandler = (data: { conversacionId: string; usuario: string }) => void;
+type MembershipHandler = (data: any) => void;
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
-  private hubUrl: string;
+  private tokenFactory: (() => Promise<string | undefined>) | null = null;
 
-  constructor() {
-    // Determine Hub URL based on environment
-    // In production (Vercel), we point directly to Render backend
-    // In development, we use relative path to leverage Vite proxy
-    const isProd = import.meta.env.PROD;
-    this.hubUrl = isProd 
-      ? "https://chatapp-mensajes.onrender.com/hubs/mensajes" 
-      : "/hubs/mensajes";
+  public setTokenFactory(factory: () => Promise<string | undefined>) {
+    this.tokenFactory = factory;
   }
 
-  public async startConnection(): Promise<void> {
+  public async startConnection(hubUrl: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
       return;
     }
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(this.hubUrl, {
+      .withUrl(hubUrl, {
         accessTokenFactory: async () => {
-          const token = getStoredToken();
-          return token || "";
+          if (this.tokenFactory) {
+            const token = await this.tokenFactory();
+            return token || "";
+          }
+          return "";
         },
       })
       .withAutomaticReconnect()
@@ -37,7 +36,14 @@ class SignalRService {
       console.log("SignalR Connected");
     } catch (err) {
       console.error("SignalR Connection Error: ", err);
-      setTimeout(() => this.startConnection(), 5000);
+      setTimeout(() => this.startConnection(hubUrl), 5000);
+    }
+  }
+
+  public async stopConnection() {
+    if (this.connection) {
+      await this.connection.stop();
+      this.connection = null;
     }
   }
 
@@ -45,44 +51,97 @@ class SignalRService {
     return this.connection;
   }
 
+  // --- Methods (Invoke) ---
+
   public async joinConversation(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      try {
-        await this.connection.invoke("UnirseAConversacion", conversationId);
-      } catch (err) {
-        console.error("Error joining conversation:", err);
-      }
+      await this.connection.invoke("UnirseAConversacion", conversationId);
     }
   }
 
   public async leaveConversation(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      try {
-        await this.connection.invoke("DejarConversacion", conversationId);
-      } catch (err) {
-        console.error("Error leaving conversation:", err);
-      }
+      await this.connection.invoke("DejarConversacion", conversationId);
     }
   }
 
-  public async sendTyping(conversationId: string) {
+  public async sendTyping(conversationId: string, username: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      try {
-        await this.connection.invoke("Escribiendo", conversationId);
-      } catch (err) {
-        console.error("Error sending typing status:", err);
-      }
+      await this.connection.invoke("Escribiendo", conversationId, username);
     }
   }
 
-  public async sendStopTyping(conversationId: string) {
+  public async sendStopTyping(conversationId: string, username: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      try {
-        await this.connection.invoke("DejoDeEscribir", conversationId);
-      } catch (err) {
-        console.error("Error sending stop typing status:", err);
-      }
+      await this.connection.invoke("DejoDeEscribir", conversationId, username);
     }
+  }
+
+  // --- Events (On/Off) ---
+
+  public onMessageReceived(callback: MessageHandler) {
+    this.connection?.on("NuevoMensaje", callback);
+  }
+
+  public offMessageReceived(callback: MessageHandler) {
+    this.connection?.off("NuevoMensaje", callback);
+  }
+
+  public onMessageRead(callback: ReadHandler) {
+    this.connection?.on("MensajeLeido", callback);
+  }
+
+  public offMessageRead(callback: ReadHandler) {
+    this.connection?.off("MensajeLeido", callback);
+  }
+
+  public onUserTyping(callback: TypingHandler) {
+    this.connection?.on("UsuarioEscribiendo", callback);
+  }
+
+  public offUserTyping(callback: TypingHandler) {
+    this.connection?.off("UsuarioEscribiendo", callback);
+  }
+
+  public onUserStoppedTyping(callback: TypingHandler) {
+    this.connection?.on("UsuarioDejoDeEscribir", callback);
+  }
+
+  public offUserStoppedTyping(callback: TypingHandler) {
+    this.connection?.off("UsuarioDejoDeEscribir", callback);
+  }
+
+  // Membership Events
+  public onUserAdded(callback: MembershipHandler) {
+    this.connection?.on("UsuarioAgregado", callback);
+  }
+
+  public offUserAdded(callback: MembershipHandler) {
+    this.connection?.off("UsuarioAgregado", callback);
+  }
+
+  public onUserRemoved(callback: MembershipHandler) {
+    this.connection?.on("UsuarioEliminado", callback);
+  }
+
+  public offUserRemoved(callback: MembershipHandler) {
+    this.connection?.off("UsuarioEliminado", callback);
+  }
+
+  public onYouWereAdded(callback: MembershipHandler) {
+    this.connection?.on("TeHanAgregado", callback);
+  }
+
+  public offYouWereAdded(callback: MembershipHandler) {
+    this.connection?.off("TeHanAgregado", callback);
+  }
+
+  public onYouWereRemoved(callback: MembershipHandler) {
+    this.connection?.on("TeHanEliminado", callback);
+  }
+
+  public offYouWereRemoved(callback: MembershipHandler) {
+    this.connection?.off("TeHanEliminado", callback);
   }
 }
 
