@@ -10,6 +10,7 @@ interface ChatWindowProps {
   chatId?: string;
   chatType?: "group" | "direct";
   chatName?: string;
+  chatAvatarUrl?: string;
   onGroupDeleted?: () => void;
 }
 
@@ -17,6 +18,7 @@ export function ChatWindow({
   chatId,
   chatType,
   chatName,
+  chatAvatarUrl,
   onGroupDeleted,
 }: ChatWindowProps) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -123,7 +125,7 @@ export function ChatWindow({
             }`}
           >
             <Avatar
-              src={undefined}
+              src={chatAvatarUrl}
               alt={chatName || "Chat"}
               size="md"
             />

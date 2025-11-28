@@ -23,15 +23,18 @@ function ChatPage() {
     id: string;
     type: "group" | "direct";
     name: string;
+    avatarUrl?: string;
   } | null>(null);
   const [showProfileDialog, setShowProfileDialog] = useState(false);
 
   const handleSelectChat = (chatId: string, type: "group" | "direct") => {
     let chatName = "";
+    let chatAvatarUrl: string | undefined = undefined;
 
     if (type === "group") {
       const group = groups.find((g) => g.id === chatId);
       chatName = group?.nombre || "Grupo sin nombre";
+      chatAvatarUrl = group?.avatarUrl || undefined;
     } else {
       const conversation = directConversations.find((c) => c.id === chatId);
       // Find the other user
@@ -40,9 +43,10 @@ function ChatPage() {
       ) || conversation?.miembros[0];
       
       chatName = otherUser?.nombre || "Usuario";
+      chatAvatarUrl = otherUser?.avatarUrl || undefined;
     }
 
-    setSelectedChat({ id: chatId, type, name: chatName });
+    setSelectedChat({ id: chatId, type, name: chatName, avatarUrl: chatAvatarUrl });
   };
 
   if (error) {
@@ -100,6 +104,7 @@ function ChatPage() {
           chatId={selectedChat?.id}
           chatType={selectedChat?.type}
           chatName={selectedChat?.name}
+          chatAvatarUrl={selectedChat?.avatarUrl}
           onGroupDeleted={() => {
             // Recargar conversaciones, limpiar selección, etc.
             refreshConversations();
