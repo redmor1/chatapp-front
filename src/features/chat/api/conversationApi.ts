@@ -20,6 +20,7 @@ export async function createGroup(groupData: CreateGroupData) {
       {
         nombre: groupData.groupName,
         emailsMiembros: groupData.initialMembers,
+        avatarUrl: groupData.avatarUrl,
       }
     );
     return response.data;

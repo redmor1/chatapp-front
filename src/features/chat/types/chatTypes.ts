@@ -28,4 +28,5 @@ export type ChatTab = "groups" | "direct";
 export interface CreateGroupData {
   groupName: string;
   initialMembers: string[];
+  avatarUrl?: string;
 }

@@ -7,6 +7,7 @@ import {
 import type { Message } from "../types/chatTypes";
 import { useSignalR } from "./useSignalR";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { useUserProfile } from "../../user/hooks/useUserProfile";
 
 export function useChatMessages(
   conversationId?: string,
@@ -18,6 +19,7 @@ export function useChatMessages(
 
   const signalR = useSignalR();
   const { user } = useAuth();
+  const { profile } = useUserProfile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
@@ -145,19 +147,23 @@ export function useChatMessages(
   }, [conversationId, signalR, user?.id, user?.name]);
 
   const handleTyping = () => {
-    if (!conversationId || !user?.name) return;
+    if (!conversationId) return;
+
+    // Use profile name if available, otherwise fallback to auth user name
+    const displayName = profile?.nombre || user?.name;
+    if (!displayName) return;
 
     // Clear existing timeout to reset the "stop typing" timer
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     } else {
       // If no timeout exists, it means we weren't typing before (or timeout expired), so send "Typing"
-      signalR.sendTyping(conversationId, user.name);
+      signalR.sendTyping(conversationId, displayName);
     }
 
     // Set a new timeout to send "Stop Typing" after 3 seconds of inactivity
     typingTimeoutRef.current = setTimeout(() => {
-      signalR.sendStopTyping(conversationId, user.name);
+      signalR.sendStopTyping(conversationId, displayName);
       typingTimeoutRef.current = null;
     }, 3000);
   };
@@ -169,8 +175,9 @@ export function useChatMessages(
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
-      if (user?.name) {
-        signalR.sendStopTyping(conversationId, user.name);
+      const displayName = profile?.nombre || user?.name;
+      if (displayName) {
+        signalR.sendStopTyping(conversationId, displayName);
       }
     }
 

@@ -8,6 +8,8 @@ import { UserProfileButton } from "../features/user/components/UserProfileButton
 import { BackendStatus } from "../shared/components/BackendStatus";
 import { LogoutButton } from "../features/auth/components/LogoutButton";
 
+import { useAuth } from "../features/auth/hooks/useAuth";
+
 function ChatPage() {
   const {
     groups,
@@ -16,6 +18,7 @@ function ChatPage() {
     error,
     refreshConversations,
   } = useChatData();
+  const { user } = useAuth();
   const [selectedChat, setSelectedChat] = useState<{
     id: string;
     type: "group" | "direct";
@@ -31,7 +34,12 @@ function ChatPage() {
       chatName = group?.nombre || "Grupo sin nombre";
     } else {
       const conversation = directConversations.find((c) => c.id === chatId);
-      chatName = conversation?.miembros[0]?.nombre || "Usuario";
+      // Find the other user
+      const otherUser = conversation?.miembros.find(
+        (m) => m.id !== user?.id
+      ) || conversation?.miembros[0];
+      
+      chatName = otherUser?.nombre || "Usuario";
     }
 
     setSelectedChat({ id: chatId, type, name: chatName });

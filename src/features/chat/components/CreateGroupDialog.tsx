@@ -29,6 +29,7 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
     const groupData: CreateGroupData = {
       groupName: formData.get("groupName") as string,
       initialMembers,
+      avatarUrl: (formData.get("avatarUrl") as string) || undefined,
     };
 
     try {
@@ -116,6 +117,22 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
               <p className="text-xs text-gray-500 mt-1">
                 Opcional: Ingresa los emails de los usuarios separados por comas
               </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="avatarUrl"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                URL de la Foto (Opcional)
+              </label>
+              <input
+                type="url"
+                id="avatarUrl"
+                name="avatarUrl"
+                placeholder="https://ejemplo.com/foto.jpg"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">
