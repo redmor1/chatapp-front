@@ -19,7 +19,8 @@ export async function createGroup(groupData: CreateGroupData) {
       "/api/v1/conversacion/grupo",
       {
         nombre: groupData.groupName,
-        miembrosIniciales: groupData.initialMembers,
+        miembrosIniciales: groupData.initialMembers, // Ahora son emails
+        emailsIniciales: groupData.initialMembers, // Enviar como emails si el backend lo requiere así, o mantener miembrosIniciales si el backend es polimórfico
       }
     );
     return response.data;
@@ -115,6 +116,22 @@ export async function addMemberToConversation(
   } catch (e) {
     console.error(`Error adding member to conversation ${conversacionId}:`, e);
     throw new Error("Error adding member to conversation");
+  }
+}
+
+export async function createDirectConversation(identifier: {
+  usuarioId?: string;
+  email?: string;
+}) {
+  try {
+    const response = await getMicroserviceClient("conversations").post(
+      "/api/v1/conversacion/directo",
+      identifier
+    );
+    return response.data;
+  } catch (e) {
+    console.error("Error creating direct conversation:", e);
+    throw new Error("Error creating direct conversation");
   }
 }
 

@@ -64,15 +64,7 @@ function ChatPage() {
           </div>
           <div className="flex items-center gap-3">
             <BackendStatus />
-            <button
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm shadow-sm"
-              onClick={() => {
-                // TODO: Implementar diálogo para iniciar chat directo
-                alert("Funcionalidad de mensaje directo - próximamente");
-              }}
-            >
-              Mensaje Directo
-            </button>
+
             <CreateGroupDialog onGroupCreated={refreshConversations} />
             <UserProfileButton onClick={() => setShowProfileDialog(true)} />
             <LogoutButton />
@@ -94,6 +86,7 @@ function ChatPage() {
           isLoading={isLoading}
           onSelectChat={handleSelectChat}
           selectedChatId={selectedChat?.id}
+          onRefresh={refreshConversations}
         />
         <ChatWindow
           chatId={selectedChat?.id}
