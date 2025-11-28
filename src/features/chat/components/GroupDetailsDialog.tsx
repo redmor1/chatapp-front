@@ -57,15 +57,19 @@ export function GroupDetailsDialog({
     if (!open || !chatId) return;
 
     const handleMemberChange = (data: { conversacionId: string }) => {
+      console.log("GroupDetailsDialog: Member changed event received", data);
       if (data.conversacionId === chatId) {
+        console.log("GroupDetailsDialog: Refreshing members for chat", chatId);
         loadMembers();
       }
     };
 
+    console.log("GroupDetailsDialog: Subscribing to member events for chat", chatId);
     signalR.onUserAdded(handleMemberChange);
     signalR.onUserRemoved(handleMemberChange);
 
     return () => {
+      console.log("GroupDetailsDialog: Unsubscribing from member events");
       signalR.offUserAdded(handleMemberChange);
       signalR.offUserRemoved(handleMemberChange);
     };

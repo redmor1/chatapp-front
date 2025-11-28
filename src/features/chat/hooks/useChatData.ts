@@ -44,14 +44,17 @@ export function useChatData() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const handleMembershipChange = () => {
+    const handleMembershipChange = (data: any) => {
+      console.log("useChatData: Membership changed, refreshing...", data);
       fetchChatData();
     };
 
+    console.log("useChatData: Subscribing to membership events");
     signalR.onYouWereAdded(handleMembershipChange);
     signalR.onYouWereRemoved(handleMembershipChange);
 
     return () => {
+      console.log("useChatData: Unsubscribing from membership events");
       signalR.offYouWereAdded(handleMembershipChange);
       signalR.offYouWereRemoved(handleMembershipChange);
     };

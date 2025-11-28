@@ -54,14 +54,14 @@ export async function sendMessage(
   }
 }
 
-export async function markMessageAsRead(messageId: string) {
+export async function markConversationAsRead(conversationId: string) {
   try {
     await getMicroserviceClient("messages").patch(
-      `/api/v1/mensajes/${messageId}/lectura`,
+      `/api/v1/conversaciones/${conversationId}/lectura`,
       {}
     );
   } catch (e) {
     console.error(e);
-    throw Error("Error marking message as read");
+    throw Error("Error marking conversation as read");
   }
 }

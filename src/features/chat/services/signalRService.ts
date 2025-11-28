@@ -1,7 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 
 type MessageHandler = (message: any) => void;
-type ReadHandler = (info: any) => void;
 type TypingHandler = (data: { conversacionId: string; usuario: string }) => void;
 type MembershipHandler = (data: any) => void;
 
@@ -87,12 +86,12 @@ class SignalRService {
     this.connection?.off("NuevoMensaje", callback);
   }
 
-  public onMessageRead(callback: ReadHandler) {
-    this.connection?.on("MensajeLeido", callback);
+  public onMessagesRead(callback: (data: { conversacionId: string; mensajeIds: string[]; usuarioId: string; fecha: string }) => void) {
+    this.connection?.on("MensajesLeidos", callback);
   }
 
-  public offMessageRead(callback: ReadHandler) {
-    this.connection?.off("MensajeLeido", callback);
+  public offMessagesRead(callback: (data: { conversacionId: string; mensajeIds: string[]; usuarioId: string; fecha: string }) => void) {
+    this.connection?.off("MensajesLeidos", callback);
   }
 
   public onUserTyping(callback: TypingHandler) {

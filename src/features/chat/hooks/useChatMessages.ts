@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   getMessagesFromConversation,
   sendMessage as sendMessageApi,
-  markMessageAsRead as markMessageAsReadApi,
+  markConversationAsRead as markMessageAsReadApi,
 } from "../api/messagesApi";
 import type { Message } from "../types/chatTypes";
 import { useSignalR } from "./useSignalR";
@@ -22,6 +22,15 @@ export function useChatMessages(
 
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markAsRead = async () => {
+    if (!conversationId) return;
+    try {
+      await markMessageAsReadApi(conversationId);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Cargar historial inicial
   useEffect(() => {
@@ -47,6 +56,9 @@ export function useChatMessages(
               new Date(b.fechaCreacion).getTime()
           )
         );
+        
+        // Marcar como leídos al entrar
+        markAsRead();
       } catch (err) {
         console.error(err);
         setError("Error al cargar mensajes");
@@ -65,26 +77,24 @@ export function useChatMessages(
     const handleNewMessage = (message: Message) => {
       if (message.conversacionId === conversationId) {
         setMessages((prev) => [...prev, message]);
-        // Si el mensaje no es mío, marcarlo como leído (opcional, depende de UX)
-        // if (message.autorId !== user?.id) {
-        //   markAsRead(message.id);
-        // }
-        
-        // Remove user from typing list if they sent a message
-        // Note: We don't have the username here easily to match with typingUsers set which stores names
-        // Ideally typingUsers should store IDs or we map IDs to names.
-        // For now, we rely on the "DejoDeEscribir" event which usually follows or we clear on new message if we could match.
+        // Si el mensaje llega y estoy en la conversación, marcar como leído
+        if (message.autorId !== user?.id) {
+           markAsRead();
+        }
       }
     };
 
-    const handleMessageRead = (info: {
-      mensajeId: string;
+    const handleMessagesRead = (info: {
+      conversacionId: string;
+      mensajeIds: string[];
       usuarioId: string;
       fecha: string;
     }) => {
+      if (info.conversacionId !== conversationId) return;
+
       setMessages((prev) =>
         prev.map((msg) => {
-          if (msg.id === info.mensajeId) {
+          if (info.mensajeIds.includes(msg.id)) {
             // Avoid duplicates in leidoPor
             const currentLeidoPor = msg.leidoPor || [];
             if (!currentLeidoPor.includes(info.usuarioId)) {
@@ -121,14 +131,14 @@ export function useChatMessages(
 
     signalR.joinConversation(conversationId);
     signalR.onMessageReceived(handleNewMessage);
-    signalR.onMessageRead(handleMessageRead);
+    signalR.onMessagesRead(handleMessagesRead);
     signalR.onUserTyping(handleUserTyping);
     signalR.onUserStoppedTyping(handleUserStoppedTyping);
 
     return () => {
       signalR.leaveConversation(conversationId);
       signalR.offMessageReceived(handleNewMessage);
-      signalR.offMessageRead(handleMessageRead);
+      signalR.offMessagesRead(handleMessagesRead);
       signalR.offUserTyping(handleUserTyping);
       signalR.offUserStoppedTyping(handleUserStoppedTyping);
     };
@@ -169,14 +179,6 @@ export function useChatMessages(
     } catch (err) {
       console.error(err);
       setError("Error al enviar mensaje");
-    }
-  };
-
-  const markAsRead = async (messageId: string) => {
-    try {
-      await markMessageAsReadApi(messageId);
-    } catch (err) {
-      console.error(err);
     }
   };
 
