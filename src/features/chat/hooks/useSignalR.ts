@@ -2,7 +2,9 @@ import { useEffect } from "react";
 import { useAuth } from "../../auth/hooks/useAuth";
 import { signalRService } from "../services/signalRService";
 
-const HUB_URL = "/hubs/mensajes"; // Use relative path to go through Vite proxy
+const HUB_URL = import.meta.env.PROD
+  ? "https://chatapp-mensajes.onrender.com/hubs/mensajes"
+  : "/hubs/mensajes";
 
 export function useSignalR() {
   const { isAuthenticated, getAccessToken } = useAuth();
