@@ -104,14 +104,12 @@ export async function getConversationMembers(conversacionId: string) {
 
 export async function addMemberToConversation(
   conversacionId: string,
-  usuarioId: string
+  identifier: { usuarioId?: string; email?: string }
 ) {
   try {
     const response = await getMicroserviceClient("conversations").post(
       `/api/v1/conversacion/${conversacionId}/miembros`,
-      {
-        usuarioId,
-      }
+      identifier
     );
     return response.data;
   } catch (e) {

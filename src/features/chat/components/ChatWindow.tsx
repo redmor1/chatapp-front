@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { deleteConversation } from "../api/conversationApi";
 import { GroupDetailsDialog } from "./GroupDetailsDialog";
 import { Avatar } from "../../../shared/components/Avatar";
+import { useChatMessages } from "../hooks/useChatMessages";
+import { useAuth } from "../../auth/hooks/useAuth";
 
 interface ChatWindowProps {
   chatId?: string;
@@ -19,6 +21,17 @@ export function ChatWindow({
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  
+  const { messages, isLoading, sendMessage, messagesEndRef } = useChatMessages(
+    chatId,
+    chatType === "group" ? "grupo" : "directo"
+  );
+  const { user } = useAuth();
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, messagesEndRef]);
 
   async function handleDeleteGroup() {
     if (!chatId) return;
@@ -48,6 +61,21 @@ export function ChatWindow({
       setIsDeleting(false);
     }
   }
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    
+    const content = newMessage;
+    setNewMessage(""); // Clear input immediately for better UX
+    await sendMessage(content);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   if (!chatId) {
     return (
@@ -80,9 +108,9 @@ export function ChatWindow({
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-white">
+    <div className="flex-1 flex flex-col bg-white h-full">
       {/* Chat Header */}
-      <div className="border-b border-gray-200 px-6 py-4 bg-white">
+      <div className="border-b border-gray-200 px-6 py-4 bg-white flex-shrink-0">
         <div className="flex items-center space-x-3">
           <button
             onClick={
@@ -139,31 +167,75 @@ export function ChatWindow({
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-        <div className="space-y-4">
-          {/* Placeholder para mensajes */}
-          <div className="text-center py-8">
-            <p className="text-sm text-gray-500">
-              Los mensajes aparecerán aquí
-            </p>
-            <p className="text-xs text-gray-400 mt-2">Chat ID: {chatId}</p>
+        {isLoading ? (
+           <div className="flex justify-center items-center h-full">
+             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+           </div>
+        ) : (
+          <div className="space-y-4">
+            {messages.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-gray-500">
+                  No hay mensajes aún. ¡Di hola!
+                </p>
+              </div>
+            ) : (
+              messages.map((msg) => {
+                const isMyMessage = msg.autorId === user?.id;
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-lg px-4 py-2 ${
+                        isMyMessage
+                          ? "bg-blue-600 text-white rounded-br-none"
+                          : "bg-white border border-gray-200 text-gray-900 rounded-bl-none"
+                      }`}
+                    >
+                      <p className="text-sm">{msg.contenido}</p>
+                      <p
+                        className={`text-[10px] mt-1 text-right ${
+                          isMyMessage ? "text-blue-100" : "text-gray-400"
+                        }`}
+                      >
+                        {new Date(msg.fechaCreacion).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
           </div>
-        </div>
+        )}
       </div>
 
       {/* Message Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
+      <div className="border-t border-gray-200 p-4 bg-white flex-shrink-0">
         <div className="flex items-end space-x-2">
           <textarea
             placeholder="Escribe un mensaje..."
             rows={1}
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = "auto";
-              target.style.height = target.scrollHeight + "px";
+              target.style.height = Math.min(target.scrollHeight, 120) + "px";
             }}
           />
-          <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+          <button 
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim()}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Enviar
           </button>
         </div>
