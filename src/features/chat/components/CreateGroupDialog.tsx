@@ -110,11 +110,11 @@ export function CreateGroupDialog({ onGroupCreated }: CreateGroupDialogProps) {
                 type="text"
                 id="initialMembers"
                 name="initialMembers"
-                placeholder="IDs de usuarios separados por comas"
+                placeholder="Emails de usuarios separados por comas"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Opcional: Ingresa los IDs de los usuarios separados por comas
+                Opcional: Ingresa los emails de los usuarios separados por comas
               </p>
             </div>
 

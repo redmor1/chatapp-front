@@ -1,6 +1,10 @@
 import * as Tabs from "@radix-ui/react-tabs";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
 import type { Conversation } from "../types/chatTypes";
 import { Avatar } from "../../../shared/components/Avatar";
+import { useAuth } from "../../auth/hooks/useAuth";
+import { NewChatDialog } from "./NewChatDialog";
 
 interface ChatSidebarProps {
   groups: Conversation[];
@@ -8,6 +12,7 @@ interface ChatSidebarProps {
   isLoading: boolean;
   onSelectChat: (chatId: string, type: "group" | "direct") => void;
   selectedChatId?: string;
+  onRefresh?: () => void;
 }
 
 export function ChatSidebar({
@@ -16,7 +21,11 @@ export function ChatSidebar({
   isLoading,
   onSelectChat,
   selectedChatId,
+  onRefresh,
 }: ChatSidebarProps) {
+  const { user } = useAuth();
+  const [showNewChatDialog, setShowNewChatDialog] = useState(false);
+
   if (isLoading) {
     return (
       <div className="w-80 border-r border-gray-200 bg-white p-4">
@@ -31,6 +40,11 @@ export function ChatSidebar({
       </div>
     );
   }
+
+  const handleChatCreated = (chatId: string) => {
+    onRefresh?.();
+    onSelectChat(chatId, "direct");
+  };
 
   return (
     <div className="w-80 border-r border-gray-200 bg-white flex flex-col">
@@ -91,45 +105,68 @@ export function ChatSidebar({
             )}
           </Tabs.Content>
 
-          <Tabs.Content value="direct" className="p-2">
+          <Tabs.Content value="direct" className="p-2 h-full flex flex-col">
+            <div className="mb-2">
+              <button
+                onClick={() => setShowNewChatDialog(true)}
+                className="w-full flex items-center justify-center space-x-2 p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+              >
+                <PlusIcon className="w-4 h-4" />
+                <span>Nuevo Chat</span>
+              </button>
+            </div>
+            
             {directConversations.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p className="text-sm">No tienes conversaciones directas aún</p>
               </div>
             ) : (
               <div className="space-y-1">
-                {directConversations.map((conversation) => (
-                  <button
-                    key={conversation.id}
-                    onClick={() => onSelectChat(conversation.id, "direct")}
-                    className={`w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors ${
-                      selectedChatId === conversation.id
-                        ? "bg-blue-50 border border-blue-200"
-                        : "border border-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Avatar
-                        src={conversation.miembros[0]?.avatarUrl || undefined}
-                        alt={conversation.miembros[0]?.nombre || "Usuario"}
-                        size="md"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {conversation.miembros[0]?.nombre || "Usuario"}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {conversation.miembros.length} participantes
-                        </p>
+                {directConversations.map((conversation) => {
+                  // Find the other user
+                  const otherUser = conversation.miembros.find(
+                    (m) => m.id !== user?.id
+                  ) || conversation.miembros[0]; // Fallback if something is weird
+
+                  return (
+                    <button
+                      key={conversation.id}
+                      onClick={() => onSelectChat(conversation.id, "direct")}
+                      className={`w-full text-left p-3 rounded-lg hover:bg-gray-100 transition-colors ${
+                        selectedChatId === conversation.id
+                          ? "bg-blue-50 border border-blue-200"
+                          : "border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Avatar
+                          src={otherUser?.avatarUrl || undefined}
+                          alt={otherUser?.nombre || "Usuario"}
+                          size="md"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {otherUser?.nombre || "Usuario"}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {conversation.miembros.length === 2 ? "Privado" : `${conversation.miembros.length} participantes`}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </Tabs.Content>
         </div>
       </Tabs.Root>
+
+      <NewChatDialog
+        open={showNewChatDialog}
+        onOpenChange={setShowNewChatDialog}
+        onChatCreated={handleChatCreated}
+      />
     </div>
   );
 }
