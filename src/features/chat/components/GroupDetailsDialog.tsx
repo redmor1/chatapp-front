@@ -56,7 +56,7 @@ export function GroupDetailsDialog({
     setAddMemberError(null);
 
     try {
-      await addMemberToConversation(chatId, { email: newMemberId.trim() });
+      await addMemberToConversation(chatId, newMemberId.trim());
       setNewMemberId("");
       await loadMembers(); // Recargar la lista
     } catch (error) {

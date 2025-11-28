@@ -1,5 +1,4 @@
 import { getMicroserviceClient } from "../../../config/httpClient";
-import type { Message } from "../types/chatTypes";
 
 export async function getDirectConversationsFromAuthenticatedUser() {
   try {
@@ -19,7 +18,7 @@ export async function getMessagesFromConversation(
   type: "grupo" | "directo",
   limit: number = 50,
   before?: string
-): Promise<Message[]> {
+) {
   try {
     const params: any = { limit, tipo: type };
     if (before) {
@@ -31,7 +30,6 @@ export async function getMessagesFromConversation(
       { params }
     );
     // El backend devuelve { mensajes: [], nextCursor: ... }
-    // Ajustamos para devolver solo el array de mensajes por ahora
     return response.data.mensajes || [];
   } catch (e) {
     console.error(e);
@@ -43,7 +41,7 @@ export async function sendMessage(
   conversationId: string,
   content: string,
   type: "grupo" | "directo"
-): Promise<void> {
+) {
   try {
     await getMicroserviceClient("messages").post(
       `/api/v1/conversaciones/${conversationId}/mensajes`,
@@ -56,7 +54,7 @@ export async function sendMessage(
   }
 }
 
-export async function markMessageAsRead(messageId: string): Promise<void> {
+export async function markMessageAsRead(messageId: string) {
   try {
     await getMicroserviceClient("messages").patch(
       `/api/v1/mensajes/${messageId}/lectura`,

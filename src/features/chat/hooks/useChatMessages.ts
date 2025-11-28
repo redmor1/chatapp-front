@@ -1,192 +1,147 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   getMessagesFromConversation,
   sendMessage as sendMessageApi,
-  markMessageAsRead as markMessageAsReadApi,
+  markMessageAsRead,
 } from "../api/messagesApi";
 import type { Message } from "../types/chatTypes";
 import { useSignalR } from "./useSignalR";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { signalRService } from "../services/signalRService";
 
 export function useChatMessages(
-  conversationId?: string,
-  chatType?: "grupo" | "directo"
+  chatId: string | undefined,
+  chatType: "grupo" | "directo" | undefined
 ) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const signalR = useSignalR();
-  const { user } = useAuth();
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Cargar historial inicial
-  useEffect(() => {
-    if (!conversationId || !chatType) {
-      setMessages([]);
-      setTypingUsers(new Set());
-      return;
-    }
+  const { connection } = useSignalR();
+  const { user } = useAuth();
 
-    const fetchMessages = async () => {
+  // Load initial messages
+  useEffect(() => {
+    if (!chatId || !chatType) return;
+
+    const loadMessages = async () => {
       setIsLoading(true);
-      setError(null);
       try {
-        const history = await getMessagesFromConversation(
-          conversationId,
-          chatType
+        const data = await getMessagesFromConversation(chatId, chatType);
+        // Ensure messages are sorted by date
+        const sortedMessages = data.sort(
+          (a: Message, b: Message) =>
+            new Date(a.fechaCreacion).getTime() -
+            new Date(b.fechaCreacion).getTime()
         );
-        // Ordenar por fecha ascendente (el backend suele devolver descendente para paginación)
-        setMessages(
-          history.sort(
-            (a, b) =>
-              new Date(a.fechaCreacion).getTime() -
-              new Date(b.fechaCreacion).getTime()
-          )
-        );
+        setMessages(sortedMessages);
       } catch (err) {
         console.error(err);
-        setError("Error al cargar mensajes");
+        setError("Error loading messages");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchMessages();
-  }, [conversationId, chatType]);
+    loadMessages();
+  }, [chatId, chatType]);
 
-  // Suscripción a SignalR
+  // Handle SignalR events
   useEffect(() => {
-    if (!conversationId) return;
+    if (!connection || !chatId) return;
 
     const handleNewMessage = (message: Message) => {
-      if (message.conversacionId === conversationId) {
+      if (message.conversacionId === chatId) {
         setMessages((prev) => [...prev, message]);
-        // Si el mensaje no es mío, marcarlo como leído (opcional, depende de UX)
-        // if (message.autorId !== user?.id) {
-        //   markAsRead(message.id);
-        // }
         
-        // Remove user from typing list if they sent a message
-        // Note: We don't have the username here easily to match with typingUsers set which stores names
-        // Ideally typingUsers should store IDs or we map IDs to names.
-        // For now, we rely on the "DejoDeEscribir" event which usually follows or we clear on new message if we could match.
+        // If message is not from me, mark as read
+        if (message.autorId !== user?.id) {
+            markMessageAsRead(message.id).catch(console.error);
+        }
       }
     };
 
-    const handleMessageRead = (info: {
-      mensajeId: string;
-      usuarioId: string;
-      fecha: string;
-    }) => {
-      setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.id === info.mensajeId) {
-            // Avoid duplicates in leidoPor
-            const currentLeidoPor = msg.leidoPor || [];
-            if (!currentLeidoPor.includes(info.usuarioId)) {
-               return {
-                ...msg,
-                leidoPor: [...currentLeidoPor, info.usuarioId],
-              };
-            }
-          }
-          return msg;
-        })
-      );
+    const handleMessageRead = (messageId: string, userId: string) => {
+        setMessages((prev) =>
+            prev.map((msg) => {
+                if (msg.id === messageId) {
+                    const leidoPor = msg.leidoPor || [];
+                    if (!leidoPor.includes(userId)) {
+                        return { ...msg, leidoPor: [...leidoPor, userId] };
+                    }
+                }
+                return msg;
+            })
+        );
     };
 
-    const handleUserTyping = (data: { conversacionId: string; usuario: string }) => {
-      if (data.conversacionId === conversationId && data.usuario !== user?.name) {
-        setTypingUsers((prev) => {
-          const newSet = new Set(prev);
-          newSet.add(data.usuario);
-          return newSet;
-        });
-      }
+    const handleUserTyping = (conversationId: string, userId: string, userName: string) => {
+        if (conversationId === chatId && userId !== user?.id) {
+            setTypingUsers(prev => {
+                if (!prev.includes(userName)) return [...prev, userName];
+                return prev;
+            });
+        }
     };
 
-    const handleUserStoppedTyping = (data: { conversacionId: string; usuario: string }) => {
-      if (data.conversacionId === conversationId) {
-        setTypingUsers((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(data.usuario);
-          return newSet;
-        });
-      }
+    const handleUserStoppedTyping = (conversationId: string, _userId: string, userName: string) => {
+        if (conversationId === chatId) {
+            setTypingUsers(prev => prev.filter(name => name !== userName));
+        }
     };
 
-    signalR.joinConversation(conversationId);
-    signalR.onMessageReceived(handleNewMessage);
-    signalR.onMessageRead(handleMessageRead);
-    signalR.onUserTyping(handleUserTyping);
-    signalR.onUserStoppedTyping(handleUserStoppedTyping);
+    connection.on("NuevoMensaje", handleNewMessage);
+    connection.on("MensajeLeido", handleMessageRead);
+    connection.on("UsuarioEscribiendo", handleUserTyping);
+    connection.on("UsuarioDejoDeEscribir", handleUserStoppedTyping);
+
+    // Join the conversation group
+    signalRService.joinConversation(chatId);
 
     return () => {
-      signalR.leaveConversation(conversationId);
-      signalR.offMessageReceived(handleNewMessage);
-      signalR.offMessageRead(handleMessageRead);
-      signalR.offUserTyping(handleUserTyping);
-      signalR.offUserStoppedTyping(handleUserStoppedTyping);
+      connection.off("NuevoMensaje", handleNewMessage);
+      connection.off("MensajeLeido", handleMessageRead);
+      connection.off("UsuarioEscribiendo", handleUserTyping);
+      connection.off("UsuarioDejoDeEscribir", handleUserStoppedTyping);
+      signalRService.leaveConversation(chatId);
     };
-  }, [conversationId, signalR, user?.id, user?.name]);
-
-  const handleTyping = () => {
-    if (!conversationId || !user?.name) return;
-
-    // Clear existing timeout to reset the "stop typing" timer
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    } else {
-      // If no timeout exists, it means we weren't typing before (or timeout expired), so send "Typing"
-      signalR.sendTyping(conversationId, user.name);
-    }
-
-    // Set a new timeout to send "Stop Typing" after 3 seconds of inactivity
-    typingTimeoutRef.current = setTimeout(() => {
-      signalR.sendStopTyping(conversationId, user.name);
-      typingTimeoutRef.current = null;
-    }, 3000);
-  };
+  }, [connection, chatId, user?.id]);
 
   const sendMessage = async (content: string) => {
-    if (!conversationId || !chatType) return;
-    
-    // Clear typing status immediately when sending
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-      if (user?.name) {
-        signalR.sendStopTyping(conversationId, user.name);
+    if (!chatId || !chatType) return;
+    try {
+      await sendMessageApi(chatId, content, chatType);
+      // Optimistic update could go here, but we rely on SignalR for now
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleTyping = useCallback(() => {
+      if (!chatId) return;
+
+      signalRService.sendTyping(chatId);
+
+      if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
       }
-    }
 
-    try {
-      await sendMessageApi(conversationId, content, chatType);
-    } catch (err) {
-      console.error(err);
-      setError("Error al enviar mensaje");
-    }
-  };
-
-  const markAsRead = async (messageId: string) => {
-    try {
-      await markMessageAsReadApi(messageId);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+      typingTimeoutRef.current = setTimeout(() => {
+          signalRService.sendStopTyping(chatId);
+      }, 3000);
+  }, [chatId]);
 
   return {
     messages,
     isLoading,
     error,
     sendMessage,
-    markAsRead,
     messagesEndRef,
-    typingUsers: Array.from(typingUsers),
-    handleTyping,
+    typingUsers,
+    handleTyping
   };
 }

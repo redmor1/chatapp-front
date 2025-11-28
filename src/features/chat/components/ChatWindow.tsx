@@ -56,29 +56,18 @@ export function ChatWindow({
 
   async function handleDeleteGroup() {
     if (!chatId) return;
-
-    // Confirmación antes de eliminar
-    if (
-      !window.confirm(
-        `¿Estás seguro de que deseas eliminar el grupo "${chatName}"? Esta acción no se puede deshacer.`
-      )
-    ) {
-      return;
-    }
+    if (!confirm("¿Estás seguro de que quieres eliminar este grupo?")) return;
 
     setIsDeleting(true);
     setDeleteError(null);
 
     try {
       await deleteConversation(chatId);
-      // Notificar al padre que el grupo fue eliminado
       onGroupDeleted?.();
-      setIsDeleting(false);
-    } catch (error) {
-      console.error("Error deleting group:", error);
-      setDeleteError(
-        "No se pudo eliminar el grupo. Por favor intenta de nuevo."
-      );
+    } catch (err) {
+      console.error(err);
+      setDeleteError("Error al eliminar el grupo");
+    } finally {
       setIsDeleting(false);
     }
   }
@@ -107,26 +96,11 @@ export function ChatWindow({
     return (
       <div className="flex-1 flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <svg
-              className="w-12 h-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
-            Selecciona una conversación
-          </h3>
-          <p className="text-gray-500 text-sm">
-            Elige un grupo o conversación directa para comenzar a chatear
+          <h2 className="text-xl font-semibold text-gray-700 mb-2">
+            ¡Bienvenido a ChatApp!
+          </h2>
+          <p className="text-gray-500">
+            Selecciona un chat de la izquierda o crea uno nuevo para empezar.
           </p>
         </div>
       </div>
@@ -144,50 +118,41 @@ export function ChatWindow({
             }
             className={`flex items-center space-x-3 flex-1 ${
               chatType === "group"
-                ? "cursor-pointer hover:opacity-80 transition-opacity"
+                ? "hover:bg-gray-50 -ml-2 p-2 rounded-lg transition-colors cursor-pointer"
                 : "cursor-default"
             }`}
-            disabled={chatType !== "group"}
           >
-            <Avatar src={undefined} alt={chatName || "Chat"} size="md" />
-            <div className="flex-1 text-left">
+            <Avatar
+              src={undefined}
+              alt={chatName || "Chat"}
+              size="md"
+            />
+            <div>
               <h2 className="text-lg font-semibold text-gray-900">
                 {chatName || "Chat"}
               </h2>
-              <p className="text-xs text-gray-500">
-                {chatType === "group"
-                  ? "Grupo • Click para ver miembros"
-                  : "Conversación directa"}
-              </p>
-            </div>
-          </button>
-          {chatType === "group" && (
-            <div className="flex flex-col items-end space-y-2">
-              {deleteError && (
-                <p className="text-xs text-red-600 max-w-xs text-right">
-                  {deleteError}
+              {chatType === "group" && (
+                <p className="text-sm text-gray-500 text-left">
+                  Haz clic para ver detalles del grupo
                 </p>
               )}
-              <button
-                onClick={handleDeleteGroup}
-                disabled={isDeleting}
-                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isDeleting ? "Eliminando..." : "Eliminar grupo"}
-              </button>
             </div>
+          </button>
+          
+          {chatType === "group" && (
+            <button
+              onClick={handleDeleteGroup}
+              disabled={isDeleting}
+              className="text-red-600 hover:text-red-700 text-sm font-medium px-3 py-1 rounded-md hover:bg-red-50 transition-colors"
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar Grupo"}
+            </button>
           )}
         </div>
+        {deleteError && (
+          <p className="text-red-600 text-sm mt-2">{deleteError}</p>
+        )}
       </div>
-
-      {/* Group Details Dialog */}
-      {chatType === "group" && chatId && (
-        <GroupDetailsDialog
-          open={showDetailsDialog}
-          onOpenChange={setShowDetailsDialog}
-          chatId={chatId}
-        />
-      )}
 
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
@@ -304,7 +269,6 @@ export function ChatWindow({
         <div className="flex items-end space-x-2">
           <textarea
             placeholder="Escribe un mensaje..."
-            rows={1}
             value={newMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -324,6 +288,14 @@ export function ChatWindow({
           </button>
         </div>
       </div>
+
+      {chatId && (
+        <GroupDetailsDialog
+          chatId={chatId}
+          open={showDetailsDialog}
+          onOpenChange={setShowDetailsDialog}
+        />
+      )}
     </div>
   );
 }

@@ -1,29 +1,32 @@
 import * as signalR from "@microsoft/signalr";
 
-type MessageHandler = (message: any) => void;
-type ReadHandler = (info: any) => void;
+// Helper to get token from storage since we can't use hook here
+const getStoredToken = () => localStorage.getItem("access_token");
 
 class SignalRService {
   private connection: signalR.HubConnection | null = null;
-  private tokenFactory: (() => Promise<string | undefined>) | null = null;
+  private hubUrl: string;
 
-  public setTokenFactory(factory: () => Promise<string | undefined>) {
-    this.tokenFactory = factory;
+  constructor() {
+    // Determine Hub URL based on environment
+    // In production (Vercel), we point directly to Render backend
+    // In development, we use relative path to leverage Vite proxy
+    const isProd = import.meta.env.PROD;
+    this.hubUrl = isProd 
+      ? "https://chatapp-mensajes.onrender.com/hubs/mensajes" 
+      : "/hubs/mensajes";
   }
 
-  public async startConnection(hubUrl: string) {
+  public async startConnection(): Promise<void> {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
       return;
     }
 
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl(hubUrl, {
+      .withUrl(this.hubUrl, {
         accessTokenFactory: async () => {
-          if (this.tokenFactory) {
-            const token = await this.tokenFactory();
-            return token || "";
-          }
-          return "";
+          const token = getStoredToken();
+          return token || "";
         },
       })
       .withAutomaticReconnect()
@@ -34,71 +37,52 @@ class SignalRService {
       console.log("SignalR Connected");
     } catch (err) {
       console.error("SignalR Connection Error: ", err);
-      setTimeout(() => this.startConnection(hubUrl), 5000);
+      setTimeout(() => this.startConnection(), 5000);
     }
   }
 
-  public async stopConnection() {
-    if (this.connection) {
-      await this.connection.stop();
-      this.connection = null;
-    }
+  public getConnection(): signalR.HubConnection | null {
+    return this.connection;
   }
 
   public async joinConversation(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke("UnirseAConversacion", conversationId);
+      try {
+        await this.connection.invoke("UnirseAConversacion", conversationId);
+      } catch (err) {
+        console.error("Error joining conversation:", err);
+      }
     }
   }
 
   public async leaveConversation(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke("DejarConversacion", conversationId);
+      try {
+        await this.connection.invoke("DejarConversacion", conversationId);
+      } catch (err) {
+        console.error("Error leaving conversation:", err);
+      }
     }
   }
 
-  public async sendTyping(conversationId: string, username: string) {
+  public async sendTyping(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke("Escribiendo", conversationId, username);
+      try {
+        await this.connection.invoke("Escribiendo", conversationId);
+      } catch (err) {
+        console.error("Error sending typing status:", err);
+      }
     }
   }
 
-  public async sendStopTyping(conversationId: string, username: string) {
+  public async sendStopTyping(conversationId: string) {
     if (this.connection?.state === signalR.HubConnectionState.Connected) {
-      await this.connection.invoke("DejoDeEscribir", conversationId, username);
+      try {
+        await this.connection.invoke("DejoDeEscribir", conversationId);
+      } catch (err) {
+        console.error("Error sending stop typing status:", err);
+      }
     }
-  }
-
-  public onMessageReceived(callback: MessageHandler) {
-    this.connection?.on("NuevoMensaje", callback);
-  }
-
-  public offMessageReceived(callback: MessageHandler) {
-    this.connection?.off("NuevoMensaje", callback);
-  }
-
-  public onMessageRead(callback: ReadHandler) {
-    this.connection?.on("MensajeLeido", callback);
-  }
-
-  public offMessageRead(callback: ReadHandler) {
-    this.connection?.off("MensajeLeido", callback);
-  }
-
-  public onUserTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
-    this.connection?.on("UsuarioEscribiendo", callback);
-  }
-
-  public offUserTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
-    this.connection?.off("UsuarioEscribiendo", callback);
-  }
-
-  public onUserStoppedTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
-    this.connection?.on("UsuarioDejoDeEscribir", callback);
-  }
-
-  public offUserStoppedTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
-    this.connection?.off("UsuarioDejoDeEscribir", callback);
   }
 }
 
