@@ -16,9 +16,11 @@ export interface Conversation {
 
 export interface Message {
   id: string;
+  conversacionId: string;
+  autorId: string;
   contenido: string;
-  autor: string;
-  timestamp: string;
+  fechaCreacion: string;
+  leidoPor: string[];
 }
 
 export type ChatTab = "groups" | "direct";
