@@ -57,6 +57,18 @@ class SignalRService {
     }
   }
 
+  public async sendTyping(conversationId: string, username: string) {
+    if (this.connection?.state === signalR.HubConnectionState.Connected) {
+      await this.connection.invoke("Escribiendo", conversationId, username);
+    }
+  }
+
+  public async sendStopTyping(conversationId: string, username: string) {
+    if (this.connection?.state === signalR.HubConnectionState.Connected) {
+      await this.connection.invoke("DejoDeEscribir", conversationId, username);
+    }
+  }
+
   public onMessageReceived(callback: MessageHandler) {
     this.connection?.on("NuevoMensaje", callback);
   }
@@ -71,6 +83,22 @@ class SignalRService {
 
   public offMessageRead(callback: ReadHandler) {
     this.connection?.off("MensajeLeido", callback);
+  }
+
+  public onUserTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
+    this.connection?.on("UsuarioEscribiendo", callback);
+  }
+
+  public offUserTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
+    this.connection?.off("UsuarioEscribiendo", callback);
+  }
+
+  public onUserStoppedTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
+    this.connection?.on("UsuarioDejoDeEscribir", callback);
+  }
+
+  public offUserStoppedTyping(callback: (data: { conversacionId: string; usuario: string }) => void) {
+    this.connection?.off("UsuarioDejoDeEscribir", callback);
   }
 }
 
